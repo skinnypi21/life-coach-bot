@@ -79,9 +79,16 @@ async function start() {
 
     // Set webhook in production
     if (process.env.NODE_ENV === 'production') {
-      const webhookUrl = `${process.env.RAILWAY_PUBLIC_DOMAIN || process.env.APP_URL}/webhook/${config.TELEGRAM_BOT_TOKEN}`;
-      await bot.setWebHook(webhookUrl);
-      logger.info('Webhook set to: ' + webhookUrl);
+      // APP_URL must include https://, RAILWAY_PUBLIC_DOMAIN does not
+      let domain = process.env.APP_URL || process.env.RAILWAY_PUBLIC_DOMAIN;
+      if (domain && !domain.startsWith('http')) domain = 'https://' + domain;
+      if (domain) {
+        const webhookUrl = `${domain}/webhook/${config.TELEGRAM_BOT_TOKEN}`;
+        await bot.setWebHook(webhookUrl);
+        logger.info('Webhook set to: ' + webhookUrl);
+      } else {
+        logger.warn('No APP_URL set — webhook not configured. Bot running without webhook.');
+      }
     }
 
     // Start cron scheduler
