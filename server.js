@@ -31,7 +31,7 @@ app.post(`/webhook/${config.TELEGRAM_BOT_TOKEN}`, (req, res) => {
 app.get('/api/goals', async (req, res) => {
   try {
     const { getCurrentWeekGoals } = require('./src/sheets/queries');
-    const goals = await getCurrentWeekGoals();
+    const goals = await getCurrentWeekGoals(req.query.weekEnding);
     res.json({ success: true, goals });
   } catch (err) {
     logger.error('API /goals error', err.message);

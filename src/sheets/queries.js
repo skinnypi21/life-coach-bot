@@ -28,21 +28,26 @@ async function getHeaders() {
 }
 
 // Get current week's goals
-async function getCurrentWeekGoals() {
+async function getCurrentWeekGoals(weekEnding) {
   try {
     const headers = await getHeaders();
     const rows = await getRows('Weekly Goals & Scores', 'A:BR');
     if (rows.length <= 1) return null;
 
-    const weekEnding = getCurrentWeekEndingDate();
+    if (!weekEnding) weekEnding = getCurrentWeekEndingDate();
     const weekEndingIdx = headers.indexOf('week_ending_date');
 
     // Find the row for current week
     const dataRows = rows.slice(1);
     let currentRow = dataRows.find(row => row[weekEndingIdx] === weekEnding);
 
-    // Fall back to latest row if no exact match
-    if (!currentRow) currentRow = dataRows[dataRows.length - 1];
+    // Fall back to the row with the most recent date (not just last array position)
+    if (!currentRow) {
+      currentRow = dataRows.reduce((best, row) => {
+        const d = row[weekEndingIdx] || '';
+        return (!best || d > (best[weekEndingIdx] || '')) ? row : best;
+      }, null);
+    }
     if (!currentRow) return null;
 
     const goals = [];

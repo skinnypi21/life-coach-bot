@@ -63,6 +63,16 @@ function ScoreButton({ value, selected, onClick, color }: { value: number; selec
   );
 }
 
+// Compute this week's Sunday in local time once (outside hooks)
+function getThisSunday() {
+  const today = new Date();
+  const d = new Date(today);
+  d.setDate(today.getDate() + (today.getDay() === 0 ? 0 : 7 - today.getDay()));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+const THIS_WEEK_ENDING = getThisSunday();
+
 export default function ReviewPage() {
   const [goals, setGoals] = useState<Goal[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,7 +99,7 @@ export default function ReviewPage() {
   async function fetchGoals() {
     try {
       setLoading(true);
-      const res = await fetch(`${API_URL}/api/goals`);
+      const res = await fetch(`${API_URL}/api/goals?weekEnding=${THIS_WEEK_ENDING}`);
       const data = await res.json();
       if (data.success && data.goals) {
         setGoals(data.goals);
@@ -175,13 +185,8 @@ export default function ReviewPage() {
     }
   }
 
-  const today = new Date();
-  const weekEndingDate = new Date(today);
-  const daysUntilSunday = today.getDay() === 0 ? 0 : 7 - today.getDay();
-  weekEndingDate.setDate(today.getDate() + daysUntilSunday);
-  // Format as YYYY-MM-DD using local time (avoids UTC rollover issue)
-  const weekEnding = `${weekEndingDate.getFullYear()}-${String(weekEndingDate.getMonth() + 1).padStart(2, '0')}-${String(weekEndingDate.getDate()).padStart(2, '0')}`;
-  const weekEndingStr = weekEndingDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const weekEnding = THIS_WEEK_ENDING;
+  const weekEndingStr = new Date(THIS_WEEK_ENDING + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
   if (submitted) {
     return (
