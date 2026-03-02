@@ -1,3 +1,11 @@
+// Format a Date object as YYYY-MM-DD using local time (not UTC)
+function toLocalDateString(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 // Get the next Sunday (week ending date)
 function getNextSunday() {
   const today = new Date();
@@ -5,7 +13,7 @@ function getNextSunday() {
   const daysUntilSunday = day === 0 ? 0 : 7 - day;
   const sunday = new Date(today);
   sunday.setDate(today.getDate() + daysUntilSunday);
-  return sunday.toISOString().split('T')[0];
+  return toLocalDateString(sunday);
 }
 
 // Get last Sunday (most recent completed week)
@@ -15,7 +23,7 @@ function getLastSunday() {
   const daysBack = day === 0 ? 7 : day;
   const lastSunday = new Date(today);
   lastSunday.setDate(today.getDate() - daysBack);
-  return lastSunday.toISOString().split('T')[0];
+  return toLocalDateString(lastSunday);
 }
 
 // Get current week's Sunday (this week's ending date)
