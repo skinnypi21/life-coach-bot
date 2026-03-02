@@ -44,22 +44,24 @@ app.post('/api/review', async (req, res) => {
   try {
     const { saveWeeklyReview, createNextWeekRow } = require('./src/sheets/queries');
     const { getCurrentWeekEndingDate } = require('./src/utils/date');
-    const { scores, satisfaction, current, nextGoals,
+    const { weekEnding: clientWeekEnding, scores, satisfaction, current, nextGoals,
             reflectionInsight, reflectionDifferent } = req.body;
 
+    // Use the date the client computed (in the user's local timezone) — fall back to server date
+    const weekEnding = clientWeekEnding || getCurrentWeekEndingDate();
+
     // 1. Save scores, progress, and satisfaction into the current week row
-    await saveWeeklyReview(scores || {}, current || {}, satisfaction || {});
+    await saveWeeklyReview(scores || {}, current || {}, satisfaction || {}, weekEnding);
 
     // 2. Create next week row if any goals were provided
     const hasNextGoals = nextGoals && Object.values(nextGoals).some(g => g && g.trim());
     let nextWeekEnding = null;
     if (hasNextGoals) {
-      nextWeekEnding = await createNextWeekRow(nextGoals);
+      nextWeekEnding = await createNextWeekRow(nextGoals, weekEnding);
     }
 
     // 3. Send Telegram confirmation with reflections echoed back
     const bot = getBot();
-    const weekEnding = getCurrentWeekEndingDate();
     const lines = [
       `✅ *Weekly review saved!* Week ending ${weekEnding}.`,
       reflectionInsight   ? `\n💡 *Insight:* ${reflectionInsight}` : null,

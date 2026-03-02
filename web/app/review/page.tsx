@@ -144,6 +144,7 @@ export default function ReviewPage() {
 
     try {
       const payload = {
+        weekEnding,
         scores: review.scores,
         satisfaction: review.satisfaction,
         goals: review.goals,
@@ -175,10 +176,12 @@ export default function ReviewPage() {
   }
 
   const today = new Date();
-  const weekEnding = new Date(today);
+  const weekEndingDate = new Date(today);
   const daysUntilSunday = today.getDay() === 0 ? 0 : 7 - today.getDay();
-  weekEnding.setDate(today.getDate() + daysUntilSunday);
-  const weekEndingStr = weekEnding.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  weekEndingDate.setDate(today.getDate() + daysUntilSunday);
+  // Format as YYYY-MM-DD using local time (avoids UTC rollover issue)
+  const weekEnding = `${weekEndingDate.getFullYear()}-${String(weekEndingDate.getMonth() + 1).padStart(2, '0')}-${String(weekEndingDate.getDate()).padStart(2, '0')}`;
+  const weekEndingStr = weekEndingDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
   if (submitted) {
     return (

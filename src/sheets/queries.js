@@ -160,7 +160,7 @@ async function checkIfReviewDone() {
 async function saveWeeklyReview(scores, current, satisfaction) {
   const headers = await getHeaders();
   const rows = await getRows('Weekly Goals & Scores', 'A:BR');
-  const weekEnding = getCurrentWeekEndingDate();
+  if (!weekEnding) weekEnding = getCurrentWeekEndingDate();
   const weekEndingIdx = headers.indexOf('week_ending_date');
 
   const dataRows = rows.slice(1);
@@ -185,9 +185,9 @@ async function saveWeeklyReview(scores, current, satisfaction) {
 }
 
 // Append a new row for next week with the provided goals
-async function createNextWeekRow(goals) {
+async function createNextWeekRow(goals, weekEnding) {
   const headers = await getHeaders();
-  const weekEnding = getCurrentWeekEndingDate();
+  if (!weekEnding) weekEnding = getCurrentWeekEndingDate();
 
   const nextDate = new Date(weekEnding + 'T12:00:00');
   nextDate.setDate(nextDate.getDate() + 7);
