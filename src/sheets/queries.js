@@ -1,6 +1,19 @@
 const { appendRow, getRows, updateRow } = require('./client');
 const { getCurrentWeekEndingDate } = require('../utils/date');
+const { detectTrackable } = require('../bot/parser');
 const logger = require('../utils/logger');
+
+// Convert 0-based column index to spreadsheet column letter (A, B, ..., Z, AA, AB, ...)
+function indexToCol(idx) {
+  let letter = '';
+  let n = idx + 1;
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    letter = String.fromCharCode(65 + rem) + letter;
+    n = Math.floor((n - 1) / 26);
+  }
+  return letter;
+}
 
 const PILLARS = [
   'social_life', 'physical_health', 'mental_health', 'meaningful_job',
@@ -10,7 +23,7 @@ const PILLARS = [
 
 // Get headers from sheet
 async function getHeaders() {
-  const rows = await getRows('Weekly Goals & Scores', 'A1:BG1');
+  const rows = await getRows('Weekly Goals & Scores', 'A1:BR1');
   return rows[0] || [];
 }
 
@@ -18,7 +31,7 @@ async function getHeaders() {
 async function getCurrentWeekGoals() {
   try {
     const headers = await getHeaders();
-    const rows = await getRows('Weekly Goals & Scores', 'A:BG');
+    const rows = await getRows('Weekly Goals & Scores', 'A:BR');
     if (rows.length <= 1) return null;
 
     const weekEnding = getCurrentWeekEndingDate();
@@ -40,13 +53,16 @@ async function getCurrentWeekGoals() {
       const targetIdx = headers.indexOf(`${pillar}_target`);
       const currentIdx = headers.indexOf(`${pillar}_current`);
 
+      const satisfactionIdx = headers.indexOf(`${pillar}_satisfaction`);
+
       goals.push({
         pillar,
         goal: currentRow[goalIdx] || 'No goal set',
         trackable: currentRow[trackableIdx] === 'TRUE' || currentRow[trackableIdx] === true,
         target: parseInt(currentRow[targetIdx]) || 1,
         current: parseInt(currentRow[currentIdx]) || 0,
-        score: parseInt(currentRow[scoreIdx]) || 0
+        score: parseInt(currentRow[scoreIdx]) || 0,
+        satisfaction: satisfactionIdx !== -1 ? (parseInt(currentRow[satisfactionIdx]) || 0) : 0
       });
     }
     return goals;
@@ -60,7 +76,7 @@ async function getCurrentWeekGoals() {
 async function updateProgress(pillar, newValue) {
   try {
     const headers = await getHeaders();
-    const rows = await getRows('Weekly Goals & Scores', 'A:BG');
+    const rows = await getRows('Weekly Goals & Scores', 'A:BR');
     if (rows.length <= 1) return false;
 
     const weekEnding = getCurrentWeekEndingDate();
@@ -72,8 +88,8 @@ async function updateProgress(pillar, newValue) {
     if (rowIndex === -1) rowIndex = dataRows.length - 1;
 
     const sheetRow = rowIndex + 2; // +1 for header, +1 for 1-indexed
-    const col = String.fromCharCode(65 + currentIdx); // Convert index to column letter
-    await updateRow('Weekly Goals & Scores', `${col}${sheetRow}`, [[newValue]]);
+    const col = indexToCol(currentIdx);
+    await updateRow('Weekly Goals & Scores', `${col}${sheetRow}`, [newValue]);
     return true;
   } catch (err) {
     logger.error('Error updating progress', err.message);
@@ -140,7 +156,70 @@ async function checkIfReviewDone() {
   }
 }
 
+// Save review scores, progress, and satisfaction into the current week row
+async function saveWeeklyReview(scores, current, satisfaction) {
+  const headers = await getHeaders();
+  const rows = await getRows('Weekly Goals & Scores', 'A:BR');
+  const weekEnding = getCurrentWeekEndingDate();
+  const weekEndingIdx = headers.indexOf('week_ending_date');
+
+  const dataRows = rows.slice(1);
+  const rowIndex = dataRows.findIndex(r => r[weekEndingIdx] === weekEnding);
+  if (rowIndex === -1) throw new Error(`No row found for week ${weekEnding}`);
+
+  const sheetRow = rowIndex + 2; // +1 header, +1 one-indexed
+  const fullRow = dataRows[rowIndex].slice();
+  while (fullRow.length < headers.length) fullRow.push('');
+
+  for (const pillar of PILLARS) {
+    const si = headers.indexOf(`${pillar}_score`);
+    const ci = headers.indexOf(`${pillar}_current`);
+    const xi = headers.indexOf(`${pillar}_satisfaction`);
+    if (si !== -1 && scores[pillar] !== undefined)       fullRow[si] = scores[pillar];
+    if (ci !== -1 && current[pillar] !== undefined)      fullRow[ci] = current[pillar];
+    if (xi !== -1 && satisfaction[pillar] !== undefined) fullRow[xi] = satisfaction[pillar];
+  }
+
+  const endCol = indexToCol(headers.length - 1);
+  await updateRow('Weekly Goals & Scores', `A${sheetRow}:${endCol}${sheetRow}`, fullRow);
+}
+
+// Append a new row for next week with the provided goals
+async function createNextWeekRow(goals) {
+  const headers = await getHeaders();
+  const weekEnding = getCurrentWeekEndingDate();
+
+  const nextDate = new Date(weekEnding + 'T12:00:00');
+  nextDate.setDate(nextDate.getDate() + 7);
+  const nextWeekEnding = nextDate.toISOString().split('T')[0];
+
+  const existing = await getRows('Weekly Goals & Scores', 'A:B');
+  if (existing.slice(1).some(r => r[1] === nextWeekEnding)) {
+    throw new Error(`Row for ${nextWeekEnding} already exists`);
+  }
+
+  const row = new Array(headers.length).fill('');
+  const set = (key, val) => { const i = headers.indexOf(key); if (i !== -1) row[i] = val; };
+
+  set('timestamp', new Date().toISOString());
+  set('week_ending_date', nextWeekEnding);
+
+  for (const pillar of PILLARS) {
+    const goal = goals[pillar] || '';
+    const { trackable, target } = detectTrackable(goal);
+    set(`${pillar}_goal`, goal);
+    set(`${pillar}_score`, 0);
+    set(`${pillar}_trackable`, trackable ? 'TRUE' : 'FALSE');
+    set(`${pillar}_target`, target);
+    set(`${pillar}_current`, 0);
+  }
+
+  await appendRow('Weekly Goals & Scores', row);
+  return nextWeekEnding;
+}
+
 module.exports = {
   getCurrentWeekGoals, updateProgress, logCheckIn,
-  logBlocker, getActiveBlockers, checkIfReviewDone, PILLARS
+  logBlocker, getActiveBlockers, checkIfReviewDone,
+  saveWeeklyReview, createNextWeekRow, PILLARS
 };

@@ -40,31 +40,34 @@ app.get('/api/goals', async (req, res) => {
 // API endpoint for the web app to submit a weekly review
 app.post('/api/review', async (req, res) => {
   try {
-    const { appendRow } = require('./src/sheets/client');
+    const { saveWeeklyReview, createNextWeekRow } = require('./src/sheets/queries');
     const { getCurrentWeekEndingDate } = require('./src/utils/date');
-    const data = req.body;
+    const { scores, satisfaction, current, nextGoals,
+            reflectionInsight, reflectionDifferent } = req.body;
 
-    // Build the row for Weekly Goals & Scores
-    const { getCurrentWeekGoals, PILLARS } = require('./src/sheets/queries');
-    const goals = await getCurrentWeekGoals();
+    // 1. Save scores, progress, and satisfaction into the current week row
+    await saveWeeklyReview(scores || {}, current || {}, satisfaction || {});
 
-    if (!goals) {
-      return res.status(404).json({ success: false, error: 'No goals found for this week' });
+    // 2. Create next week row if any goals were provided
+    const hasNextGoals = nextGoals && Object.values(nextGoals).some(g => g && g.trim());
+    let nextWeekEnding = null;
+    if (hasNextGoals) {
+      nextWeekEnding = await createNextWeekRow(nextGoals);
     }
 
-    // For now, log the review data — full implementation handled by web app
-    logger.info('Weekly review submitted', data);
-
-    // Send confirmation to Telegram
+    // 3. Send Telegram confirmation with reflections echoed back
     const bot = getBot();
     const weekEnding = getCurrentWeekEndingDate();
-    await bot.sendMessage(
-      config.TELEGRAM_CHAT_ID,
-      `✅ *Weekly review submitted!* Great job reflecting on your week ending ${weekEnding}.\n\nSee you next week! 🚀`,
-      { parse_mode: 'Markdown' }
-    );
+    const lines = [
+      `✅ *Weekly review saved!* Week ending ${weekEnding}.`,
+      reflectionInsight   ? `\n💡 *Insight:* ${reflectionInsight}` : null,
+      reflectionDifferent ? `🔄 *Next time:* ${reflectionDifferent}` : null,
+      nextWeekEnding      ? `\n🎯 Next week's goals set for ${nextWeekEnding}!` : null,
+    ].filter(Boolean);
+    await bot.sendMessage(config.TELEGRAM_CHAT_ID, lines.join('\n'), { parse_mode: 'Markdown' });
 
-    res.json({ success: true, message: 'Review submitted successfully' });
+    logger.info(`Review saved: week=${weekEnding}, nextWeek=${nextWeekEnding}`);
+    res.json({ success: true, weekEnding, nextWeekEnding });
   } catch (err) {
     logger.error('API /review error', err.message);
     res.status(500).json({ success: false, error: err.message });

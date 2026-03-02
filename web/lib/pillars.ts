@@ -21,4 +21,5 @@ export interface Goal {
   target: number;
   current: number;
   score: number;
+  satisfaction: number;
 }

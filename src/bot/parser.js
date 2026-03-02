@@ -149,4 +149,30 @@ function parseMessage(message) {
   };
 }
 
-module.exports = { parseMessage, detectPillar, extractNumber, detectBlocker, PILLAR_KEYWORDS };
+// Detect if a goal text is trackable and extract its target value
+// e.g. "Workout 3x" → { trackable: true, target: 3 }
+// e.g. "Give the right amount of effort" → { trackable: false, target: 1 }
+function detectTrackable(goalText) {
+  if (!goalText) return { trackable: false, target: 1 };
+  const text = goalText.toLowerCase();
+  const patterns = [
+    { re: /(\d+)\s*x\b/,             target: null  }, // "4x", "3x"
+    { re: /(\d+)\s*times/,           target: null  }, // "3 times"
+    { re: /(\d+)\s*pages/,           target: null  }, // "100 pages"
+    { re: /(\d+)\s*(min|minutes)/,   target: null  }, // "30 min"
+    { re: /(\d+)\s*(hour|hr)s?/,     target: null  }, // "2 hours"
+    { re: /(\d+)\s*days/,            target: null  }, // "5 days"
+    { re: /(\d+)\s*sessions?/,       target: null  }, // "3 sessions"
+    { re: /every\s*(single\s*)?day/, target: 7     }, // "every day", "every single day"
+    { re: /daily/,                   target: 7     }, // "daily"
+  ];
+  for (const p of patterns) {
+    const m = text.match(p.re);
+    if (m) {
+      return { trackable: true, target: p.target !== null ? p.target : parseInt(m[1]) };
+    }
+  }
+  return { trackable: false, target: 1 };
+}
+
+module.exports = { parseMessage, detectPillar, extractNumber, detectBlocker, detectTrackable, PILLAR_KEYWORDS };
