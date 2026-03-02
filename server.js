@@ -1,11 +1,13 @@
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const { createBot, getBot } = require('./src/bot');
 const { startScheduler } = require('./src/scheduler');
 const config = require('./src/config');
 const logger = require('./src/utils/logger');
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
 // Health check endpoint (used by Railway to verify the app is running)
