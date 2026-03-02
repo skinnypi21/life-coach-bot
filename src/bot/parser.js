@@ -3,7 +3,7 @@
 
 const PILLAR_KEYWORDS = {
   physical_health: [
-    'gym', 'workout', 'exercise', 'run', 'ran', 'jog', 'walk', 'walked',
+    'gym', 'workout', 'worked out', 'exercise', 'run', 'ran', 'jog', 'walk', 'walked',
     'swim', 'swam', 'bike', 'biked', 'yoga', 'stretch', 'lift', 'lifted',
     'physical', 'health', 'sleep', 'slept', 'steps', 'hiit', 'crossfit',
     'weights', 'cardio', 'active', 'sport', 'tennis', 'basketball', 'soccer',
@@ -44,10 +44,11 @@ const PILLAR_KEYWORDS = {
     'ted talk', 'audiobook', 'pages', 'chapters', 'minutes of reading'
   ],
   meaning_purpose: [
-    'purpose', 'meaning', 'volunteer', 'volunteered', 'donate', 'donated',
-    'cause', 'impact', 'contribute', 'contributed', 'mission', 'vision',
-    'values', 'legacy', 'inspire', 'inspired', 'community', 'help someone',
-    'helped someone', 'giving back', 'church', 'spiritual', 'spirituality'
+    'purpose', 'meaning', 'volunteer', 'volunteered', 'volunteer training',
+    'donate', 'donated', 'cause', 'impact', 'contribute', 'contributed',
+    'mission', 'vision', 'values', 'legacy', 'inspire', 'inspired',
+    'community', 'help someone', 'helped someone', 'giving back',
+    'church', 'spiritual', 'spirituality'
   ],
   romantic_love: [
     'partner', 'girlfriend', 'boyfriend', 'wife', 'husband', 'spouse',
@@ -115,6 +116,10 @@ function extractNumber(message) {
   // Look for explicit numbers first (e.g., "30 minutes", "5 pages", "3 times")
   const numMatch = lower.match(/\b(\d+)\s*(min|minutes?|hours?|pages?|times?|reps?|sets?|miles?|km|kilometers?|lbs?|pounds?|days?|sessions?|chapters?|books?|articles?|podcasts?)\b/);
   if (numMatch) return parseInt(numMatch[1]);
+
+  // Look for "Nx" pattern (e.g., "2x", "3x", "worked out 2x")
+  const nxMatch = lower.match(/(\d+)\s*x\b/i);
+  if (nxMatch) return parseInt(nxMatch[1]);
 
   // Look for plain numbers
   const plainMatch = lower.match(/\b(\d+)\b/);
