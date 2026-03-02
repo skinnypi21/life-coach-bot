@@ -157,7 +157,7 @@ async function checkIfReviewDone() {
 }
 
 // Save review scores, progress, and satisfaction into the current week row
-async function saveWeeklyReview(scores, current, satisfaction) {
+async function saveWeeklyReview(scores, current, satisfaction, weekEnding) {
   const headers = await getHeaders();
   const rows = await getRows('Weekly Goals & Scores', 'A:BR');
   if (!weekEnding) weekEnding = getCurrentWeekEndingDate();
