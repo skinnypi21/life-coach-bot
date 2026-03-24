@@ -63,11 +63,11 @@ function ScoreButton({ value, selected, onClick, color }: { value: number; selec
   );
 }
 
-// Compute this week's Sunday in local time once (outside hooks)
+// Compute the most recently elapsed Sunday in local time (for the weekly review)
 function getThisSunday() {
   const today = new Date();
   const d = new Date(today);
-  d.setDate(today.getDate() + (today.getDay() === 0 ? 0 : 7 - today.getDay()));
+  d.setDate(today.getDate() - today.getDay()); // Sun=0 stays, Mon goes back 1, Tue goes back 2, etc.
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
