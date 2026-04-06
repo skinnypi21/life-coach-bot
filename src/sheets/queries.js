@@ -169,8 +169,18 @@ async function saveWeeklyReview(scores, current, satisfaction, weekEnding) {
   const weekEndingIdx = headers.indexOf('week_ending_date');
 
   const dataRows = rows.slice(1);
-  const rowIndex = dataRows.findIndex(r => r[weekEndingIdx] === weekEnding);
-  if (rowIndex === -1) throw new Error(`No row found for week ${weekEnding}`);
+  let rowIndex = dataRows.findIndex(r => r[weekEndingIdx] === weekEnding);
+  if (rowIndex === -1) {
+    // Fall back to most recent row (same as getCurrentWeekGoals)
+    let bestIdx = -1;
+    let bestDate = '';
+    dataRows.forEach((r, i) => {
+      const d = r[weekEndingIdx] || '';
+      if (d > bestDate) { bestDate = d; bestIdx = i; }
+    });
+    if (bestIdx === -1) throw new Error(`No row found for week ${weekEnding}`);
+    rowIndex = bestIdx;
+  }
 
   const sheetRow = rowIndex + 2; // +1 header, +1 one-indexed
   const fullRow = dataRows[rowIndex].slice();
