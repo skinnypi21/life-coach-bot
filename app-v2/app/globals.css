@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0b0f14;
+  --color-surface: #131a23;
+  --color-surface-2: #1a2330;
+  --color-line: rgba(148, 163, 184, 0.13);
+  --color-ink: #e9eef4;
+  --color-ink-2: #93a0b1;
+  --color-ink-3: #5b6779;
+  --color-accent: #5eead4;
+  --color-danger: #f87171;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
+}
+
+html {
+  background: var(--color-bg);
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+  text-rendering: optimizeLegibility;
+}
+
+/* Feels-native touches: no text selection on chrome, no callouts */
+button, a, nav, header {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+input, textarea {
+  font-size: 16px; /* prevents iOS zoom-on-focus */
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes sheet-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-3px); }
+  40%, 60% { transform: translateX(3px); }
+}
+
+.animate-fade-up { animation: fade-up 0.35s ease both; }
+.animate-sheet-up { animation: sheet-up 0.4s cubic-bezier(0.32, 0.72, 0, 1) both; }
+.animate-shake { animation: shake 0.5s ease both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up, .animate-sheet-up, .animate-shake { animation: none; }
+}

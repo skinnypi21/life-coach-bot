@@ -78,6 +78,9 @@ app.post('/api/review', async (req, res) => {
   }
 });
 
+// v2 PWA API (additive — serves /app-v2; v1 endpoints above are untouched)
+app.use('/api/v2', require('./src/v2/router'));
+
 // Start the server
 async function start() {
   try {
