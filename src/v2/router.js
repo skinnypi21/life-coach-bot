@@ -5,6 +5,8 @@ const logger = require('../utils/logger');
 const { createToken, verifyToken, safeEqual } = require('./auth');
 const { getCurrentWeekGoals, PILLARS } = require('../sheets/queries');
 const { updateProgressForWeek, getActiveBlockersDetailed, resolveBlocker } = require('./queries');
+const { handleChat } = require('./chat');
+const { loadRecentMessages } = require('./db');
 
 const router = express.Router();
 
@@ -108,6 +110,52 @@ router.post('/blockers/resolve', requireAuth, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     logger.error('API /v2/blockers/resolve error', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// AI coach chat (Phase 2)
+// ---------------------------------------------------------------------------
+
+// One user message in → assistant reply + structured list of progress/blocker
+// changes (for confirmation chips). weekEnding is client-computed, same
+// timezone decision as /progress and the v1 review form.
+router.post('/chat', requireAuth, async (req, res) => {
+  try {
+    const { message, weekEnding } = req.body || {};
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      return res.status(400).json({ success: false, error: 'message required' });
+    }
+    if (message.length > 4000) {
+      return res.status(400).json({ success: false, error: 'message too long (max 4000 chars)' });
+    }
+    const result = await handleChat(message.trim(), weekEnding);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    logger.error('API /v2/chat error', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Chat history for the app to reload on mount. `changes` is reconstructed
+// from the tool_calls jsonb so confirmation chips survive a reload.
+router.get('/chat/history', requireAuth, async (req, res) => {
+  try {
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 200);
+    const rows = await loadRecentMessages(limit);
+    res.json({
+      success: true,
+      messages: rows.map(r => ({
+        id: r.id,
+        role: r.role,
+        content: r.content,
+        changes: (r.tool_calls && r.tool_calls.changes) || [],
+        createdAt: r.created_at
+      }))
+    });
+  } catch (err) {
+    logger.error('API /v2/chat/history error', err.message);
     res.status(500).json({ success: false, error: err.message });
   }
 });

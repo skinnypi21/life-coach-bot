@@ -69,6 +69,41 @@ export async function setProgress(pillar: string, value: number, weekEnding: str
   });
 }
 
+// --- Chat (Phase 2) -------------------------------------------------------
+// History persistence: the backend stores every exchange in Postgres; the
+// page reloads it on mount via GET /api/v2/chat/history (separate endpoint,
+// not bundled into the chat response). Chips re-render from `changes`.
+
+export interface ChatChange {
+  type: 'progress' | 'blocker';
+  pillar: string;
+  value?: number;
+  target?: number | null;
+  description?: string;
+}
+
+export interface ChatMessage {
+  id?: number;
+  role: 'user' | 'assistant';
+  content: string;
+  changes?: ChatChange[];
+}
+
+export async function sendChat(
+  message: string,
+  weekEnding: string
+): Promise<{ reply: string; changes: ChatChange[] }> {
+  return request('/api/v2/chat', {
+    method: 'POST',
+    body: JSON.stringify({ message, weekEnding }),
+  });
+}
+
+export async function getChatHistory(): Promise<ChatMessage[]> {
+  const { messages } = await request<{ messages: ChatMessage[] }>('/api/v2/chat/history');
+  return messages;
+}
+
 export async function getBlockers(): Promise<Blocker[]> {
   const { blockers } = await request<{ blockers: Blocker[] }>('/api/v2/blockers');
   return blockers;

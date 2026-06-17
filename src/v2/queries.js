@@ -1,6 +1,6 @@
 // v2-only Sheets queries. These deliberately live outside src/sheets/queries.js
 // so v1 code paths stay untouched. They reuse the low-level client only.
-const { getRows, updateRow } = require('../sheets/client');
+const { getRows, updateRow, appendRow } = require('../sheets/client');
 
 const SCORES_SHEET = 'Weekly Goals & Scores';
 const BLOCKERS_SHEET = 'Blockers';
@@ -83,4 +83,14 @@ async function resolveBlocker(row, timestamp) {
     ['resolved', new Date().toISOString()]);
 }
 
-module.exports = { updateProgressForWeek, getActiveBlockersDetailed, resolveBlocker };
+// Append a blocker row — same column layout v1 writes and the resolve flow
+// reads (A timestamp, B pillar, C goal, D description, E status, F resolution,
+// G created_date). Unlike v1's logBlocker this throws on failure, so the chat
+// tool loop can return an honest tool_result instead of claiming success.
+async function logBlockerStrict(pillar, goal, description) {
+  const now = new Date().toISOString();
+  await appendRow(BLOCKERS_SHEET, [now, pillar, goal, description, 'active', '', now]);
+  return { timestamp: now };
+}
+
+module.exports = { updateProgressForWeek, getActiveBlockersDetailed, resolveBlocker, logBlockerStrict };
